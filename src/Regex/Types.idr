@@ -33,11 +33,13 @@ data InRegExp: RegExp a -> List a -> Type where
   ||| `xs ++ ys` is in `Cat r s`
   InCat : {xs : List a} ->
           {ys : List a} ->
+          {zs : List a} ->
           {r : RegExp a} ->
           {s : RegExp a} ->
+          (p : zs = xs ++ ys) ->
           InRegExp r xs ->
           InRegExp s ys ->
-          InRegExp (Cat r s) (xs ++ ys)
+          InRegExp (Cat r s) zs
   ||| Rule: If `xs` is in regular expression `r`, then `xs` is in `Disj r _` (i.e. left side)
   InDisjL : {xs : List a} ->
             {r : RegExp a} ->
@@ -64,7 +66,9 @@ data InRegExp: RegExp a -> List a -> Type where
   ||| in `Star r`.
   InStarS : {xs : List a} ->
             {ys : List a} ->
+            {zs : List a} ->
             {r : RegExp a} ->
+            (p : zs = xs ++ ys) ->
             InRegExp r xs ->
             InRegExp (Star r) ys ->
             InRegExp (Star r) (xs ++ ys)
@@ -105,6 +109,21 @@ DecEq a => DecEq (RegExp a) where
   -- than to write out a million trivial `No` cases.
   decEq _ _ = No believe_me
 
+-- TODO move into generic Proofs module
+export
+lemma_consNotNil : {x : t} -> {xs : List t} -> (x::xs) = [] -> Void
+lemma_consNotNil Refl impossible
+
+-- TODO move into generic Proofs module
+export
+lemma_appendOutputNil : {xs : List a} ->
+                        {ys : List a} ->
+                        [] = xs ++ ys ->
+                        (xs = [], ys = [])
+lemma_appendOutputNil {xs=[]} {ys=[]} p = (Refl, Refl)
+lemma_appendOutputNil {xs=[]} {ys=y::ys} p = absurd $ lemma_consNotNil $ sym p
+lemma_appendOutputNil {xs=(x::xs)} {ys} p = absurd $ lemma_consNotNil $ sym p
+
 ||| Proof that `Null` can't match any string
 export
 nullMatchesAny_contra : {xs : List a} -> InRegExp Null xs -> Void
@@ -139,6 +158,32 @@ litMatchesEmpty_contra _ impossible
 export
 litMatchesCons_implies_restEmpty : InRegExp (Lit x) (x::xs) -> xs = []
 litMatchesCons_implies_restEmpty InLit = Refl
+
+||| Proof that if the `Cat r s` matches empty, then both `r` and `s` also match empty
+export
+lemma_catNotEmpty : {r : RegExp a} ->
+                    {s : RegExp a} ->
+                    InRegExp (Cat r s) [] ->
+                   (InRegExp r [], InRegExp s [])
+lemma_catNotEmpty (InCat p r s) with (lemma_appendOutputNil p)
+  lemma_catNotEmpty (InCat p r s) | (Refl, Refl) = (r, s)
+
+||| Proof that if `Disj r s` matches empty, then at least one of `r` and `s` matches empty
+export
+lemma_disjNotEmpty : {r : RegExp a} ->
+                     {s : RegExp a} ->
+                     InRegExp (Disj r s) [] ->
+                     Either (InRegExp r []) (InRegExp s [])
+lemma_disjNotEmpty (InDisjL r) = Left r
+lemma_disjNotEmpty (InDisjR r) = Right r
+
+||| Proof that if the `Conj r s` matches empty, then both `r` and `s` also match empty
+export
+lemma_conjNotEmpty : {r : RegExp a} ->
+                     {s : RegExp a} ->
+                     InRegExp (Conj r s) [] ->
+                     (InRegExp r [], InRegExp s [])
+lemma_conjNotEmpty (InConj r s) = (r, s)
 
 ||| Proof that if both `Disj` inputs cannot match empty, then the `Disj` cannot match empty
 export

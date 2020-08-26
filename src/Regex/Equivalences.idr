@@ -9,10 +9,24 @@ import public Regex.Types
 
 %default total
 
-||| Defines a "normalized" `Disj`, which applies the following rules:
+||| Constructs a "normalized" `Cat`, which applies the following rules:
+|||   - ∅ · r ≈ ∅
+|||   - r · ∅ ≈ ∅
+|||   - ε · r ≈ r
+|||   - r · ε ≈ r
+|||   - (r · s) · t ≈ r · (s · t)
+export
+normCat : DecEq a => RegExp a -> RegExp a -> RegExp a
+normCat Null      _     = Null
+normCat _         Null  = Null
+normCat Empty     r     = r
+normCat r         Empty = r
+normCat (Cat r s) t     = Cat r (Cat s t)
+normCat r         s     = Cat r s
+
+||| Constructs a "normalized" `Disj`, which applies the following rules:
 |||
 |||   - ∅ + r ≈ r
-|||   - ¬∅ + r ≈ ¬∅
 |||   - r + r ≈ r
 |||   - (r + s) + t ≈ r + (s + t)
 |||
@@ -21,12 +35,49 @@ import public Regex.Types
 |||   - r + s ≈ s + r
 export
 normDisj : DecEq a => RegExp a -> RegExp a -> RegExp a
-normDisj Null r = r
-normDisj r Null = r
+normDisj Null r    = r
+normDisj r    Null = r
 normDisj r s with (decEq r s)
   normDisj r          r | (Yes Refl) = r
   normDisj (Disj r s) t | (No _)     = Disj r (Disj s t)
   normDisj r          s | (No _)     = Disj r s
+
+||| Constructs a "normalized" `Conj`, which applies the following rules:
+|||   - ∅ & r ≈ ∅
+|||   - r & r ≈ r
+|||   - (r & s) & t ≈ r & (s & t)
+|||
+||| Note that the remaining equivalence (symmetry) is not captured:
+|||
+|||   - r & s ≈ s & r
+export
+normConj : DecEq a => RegExp a -> RegExp a -> RegExp a
+normConj Null _    = Null
+normConj _    Null = Null
+normConj r s with (decEq r s)
+  normConj r r          | (Yes Refl) = r
+  normConj (Conj r s) t | (No _)     = Conj r (Conj s t)
+  normConj r s          | (No _)     = Conj r s
+
+||| Proof (by exhaustion) that `normCat` is sound.
+export
+normCat_isSound : DecEq a =>
+                  {xs : List a} ->
+                  {r : RegExp a} ->
+                  {s : RegExp a} ->
+                  InRegExp (normCat r s) xs ->
+                  InRegExp (Cat r s) xs
+normCat_isSound = ?normCat_isSound_hole1
+
+||| Proof (by exhaustion) that `normCat` is complete.
+export
+normCat_isComplete : DecEq a =>
+                     {xs : List a} ->
+                     {r : RegExp a} ->
+                     {s : RegExp a} ->
+                     InRegExp (Cat r s) xs ->
+                     InRegExp (normCat r s) xs
+normCat_isComplete = ?normCat_isComplete_hole1
 
 ||| Proof (by exhaustion) that `normDisj` is sound.
 export
@@ -204,3 +255,23 @@ normDisj_isComplete {r=(Star r)} {s=(Star s)} p with (decEq r s)
   normDisj_isComplete {r=(Star r)} {s=(Star r)}   (InDisjL p) | (Yes Refl) = p
   normDisj_isComplete {r=(Star r)} {s=(Star r)}   (InDisjR p) | (Yes Refl) = p
   normDisj_isComplete {r=(Star r)} {s=(Star s)}   p           | (No _)     = p
+
+||| Proof (by exhaustion) that `normConj` is sound.
+export
+normConj_isSound : DecEq a =>
+                   {xs : List a} ->
+                   {r : RegExp a} ->
+                   {s : RegExp a} ->
+                   InRegExp (normConj r s) xs ->
+                   InRegExp (Conj r s) xs
+normConj_isSound = ?normConj_isSound_hole1
+
+||| Proof (by exhaustion) that `normCat` is complete.
+export
+normConj_isComplete : DecEq a =>
+                      {xs : List a} ->
+                      {r : RegExp a} ->
+                      {s : RegExp a} ->
+                      InRegExp (Conj r s) xs ->
+                      InRegExp (normConj r s) xs
+normConj_isComplete = ?normConj_isComplete_hole1
