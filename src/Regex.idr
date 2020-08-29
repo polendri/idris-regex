@@ -11,51 +11,24 @@ import public Regex.Types
 
 %default total
 
-infix 4 ~=
-
--- TODO move into generic Proofs module
--- TODO delete
-lemma_consInjective : {x : a} -> {xs : List a} -> {y : b} -> {ys : List b} ->
-                (x :: xs) = (y :: ys) -> (x = y, xs = ys)
-lemma_consInjective Refl = (Refl, Refl)
-
--- TODO move into generic Proofs module
--- TODO delete
-lemma_appendEqLeft : {xs : List a} -> {ys : List a} -> xs = xs ++ ys -> ys = []
-lemma_appendEqLeft {xs} {ys=[]} p = Refl
-lemma_appendEqLeft {xs=[]} {ys} p = sym p
-lemma_appendEqLeft {xs=x::xs} {ys} p = lemma_appendEqLeft $ snd $ lemma_consInjective p
-
--- TODO delete
-||| Proof that if `x::xs = ys ++ zs`, then either `ys` is empty or else `x` is also at the head of
-||| `ys`.
-lemma_appendEqCons : {x : a} ->
-                     {xs : List a} ->
-                     {ys : List a} ->
-                     {zs : List a} ->
-                     x::xs = ys ++ zs ->
-                     Either (ys' ** (ys = x::ys', xs = ys' ++ zs)) (ys = [], x::xs = zs)
-lemma_appendEqCons {ys=[]} p = Right (Refl, p)
-lemma_appendEqCons {ys=y::ys} p = let (Refl, p') = lemma_consInjective p in Left (ys ** (Refl, p'))
-
 ||| Given a regular expression `r` and a string `xs`, determines whether `r` _matches_ `[]` (i.e.
 ||| whether empty is in the language of `r`).
 matchEmpty : (r : RegExp a) -> Dec (InRegExp r [])
-matchEmpty Null = No nullMatchesAny_contra
+matchEmpty Null = No absurd
 matchEmpty Empty = Yes InEmpty
-matchEmpty (Lit x) = No $ litMatchesEmpty_contra
+matchEmpty (Lit x) = No absurd
 matchEmpty (Cat r s) = case (matchEmpty r, matchEmpty s) of
                             (Yes pr, Yes ps) => Yes $ InCat Refl pr ps
-                            (No contra, _)   => No  $ contra . fst . lemma_catNotEmpty
-                            (_, No contra)   => No  $ contra . snd . lemma_catNotEmpty
+                            (No contra, _)   => No  $ contra . fst . catNotEmpty
+                            (_, No contra)   => No  $ contra . snd . catNotEmpty
 matchEmpty (Disj r s) = case (matchEmpty r, matchEmpty s) of
                              (Yes p, _)               => Yes $ InDisjL p
                              (_, Yes p)               => Yes $ InDisjR p
-                             (No contraR, No contraS) => No  $ absurd . either contraR contraS . lemma_disjNotEmpty
+                             (No contraR, No contraS) => No  $ absurd . either contraR contraS . disjNotEmpty
 matchEmpty (Conj r s) = case (matchEmpty r, matchEmpty s) of
                              (Yes pr, Yes ps) => Yes $ InConj pr ps
-                             (No contra, _)   => No  $ contra . fst . lemma_conjNotEmpty
-                             (_, No contra)   => No  $ contra . snd . lemma_conjNotEmpty
+                             (No contra, _)   => No  $ contra . fst . conjNotEmpty
+                             (_, No contra)   => No  $ contra . snd . conjNotEmpty
 matchEmpty (Star r) = Yes InStarZ
 
 ||| Computes the derivative of a regular expression `r` with respect to a symbol `x`.
@@ -83,7 +56,7 @@ derive_isSound {r=Null}  _ impossible
 derive_isSound {r=Empty} _ impossible
 derive_isSound {r=(Lit y)} {x} p with (decEq y x)
   derive_isSound {r=(Lit x)} {x} p | (Yes Refl) = rewrite emptyMatch_implies_emptyList p in InLit
-  derive_isSound {r=(Lit y)} {x} p | (No _)     = absurd $ nullMatchesAny_contra p
+  derive_isSound {r=(Lit y)} {x} p | (No _)     = absurd p
 derive_isSound {r=(Cat r s)} {x} p with (matchEmpty r)
   derive_isSound {r=(Cat r s)} {x} p | (Yes pEmpty) with (normDisj_isSound p)
     derive_isSound {r=(Cat r s)} {x} p | (Yes pEmpty) | (InDisjL t) with (normCat_isSound t)
@@ -113,7 +86,7 @@ mutual
   deriveStar_isComplete {xs'} x _ p (InStarS {xs=[]} {ys} Refl pr ps) =
     deriveStar_isComplete x ys p ps
   deriveStar_isComplete x _ p (InStarS {xs=y::ys} pCat pr ps) =
-    let (Refl, Refl) = lemma_consInjective p in
+    let (Refl, Refl) = consInjective p in
         normCat_isComplete $ InCat Refl (derive_isComplete pr) ps
 
   ||| Proof that the derivation-based match algorithm is complete
@@ -123,8 +96,8 @@ mutual
                       {xs : List a} ->
                       InRegExp r (x::xs) ->
                       InRegExp (derive r x) xs
-  derive_isComplete {r=Null}       p               = absurd $ nullMatchesAny_contra p
-  derive_isComplete {r=Empty}      p               = absurd $ emptyMatchesNonEmpty_contra p
+  derive_isComplete {r=Null}       p               = absurd p
+  derive_isComplete {r=Empty}      p               = absurd p
   derive_isComplete {r=(Lit y)}    p with (decEq y x)
     derive_isComplete {r=(Lit x)} p | (Yes Refl)  = rewrite litMatchesCons_implies_restEmpty p in InEmpty
     derive_isComplete {r=(Lit y)} p | (No contra) = absurd $ contra $ litMatches_implies_headEqual p
@@ -148,9 +121,9 @@ mutual
 ||| Given a regular expression `r` and a string `xs`, determines whether `r` _matches_ `u` (i.e.
 ||| whether `xs` is in the language of `r`).
 export
-(~=) : DecEq a => (r : RegExp a) -> (xs : List a) -> Dec (InRegExp r xs)
-(~=) r [] = matchEmpty r
-(~=) r (x::xs) =
-  case (derive r x) ~= xs of
+matches : DecEq a => (xs : List a) -> (r : RegExp a) -> Dec (InRegExp r xs)
+matches [] r = matchEmpty r
+matches (x::xs) r =
+  case matches xs (derive r x) of
     Yes prf => Yes $ derive_isSound prf
     No contra => No $ contra . derive_isComplete

@@ -1,5 +1,6 @@
 module Regex.Types
 
+import Data.List
 import Decidable.Equality
 
 %default total
@@ -73,6 +74,10 @@ data InRegExp: RegExp a -> List a -> Type where
             InRegExp (Star r) ys ->
             InRegExp (Star r) (xs ++ ys)
 
+----------------------------------------------------------------------------------------------------
+-- Interface Implementations                                                                      --
+----------------------------------------------------------------------------------------------------
+
 export
 DecEq a => DecEq (RegExp a) where
   decEq Null Null = Yes Refl
@@ -109,35 +114,34 @@ DecEq a => DecEq (RegExp a) where
   -- than to write out a million trivial `No` cases.
   decEq _ _ = No believe_me
 
--- TODO move into generic Proofs module
-export
-lemma_consNotNil : {x : t} -> {xs : List t} -> (x::xs) = [] -> Void
-lemma_consNotNil Refl impossible
+----------------------------------------------------------------------------------------------------
+-- Properties                                                                                     --
+----------------------------------------------------------------------------------------------------
 
--- TODO move into generic Proofs module
-export
-lemma_appendOutputNil : {xs : List a} ->
-                        {ys : List a} ->
-                        [] = xs ++ ys ->
-                        (xs = [], ys = [])
-lemma_appendOutputNil {xs=[]} {ys=[]} p = (Refl, Refl)
-lemma_appendOutputNil {xs=[]} {ys=y::ys} p = absurd $ lemma_consNotNil $ sym p
-lemma_appendOutputNil {xs=(x::xs)} {ys} p = absurd $ lemma_consNotNil $ sym p
+appendOutputNil : {xs : List a} ->
+                  {ys : List a} ->
+                  xs ++ ys = [] ->
+                  (xs = [], ys = [])
+appendOutputNil {xs=[]} {ys=[]}    p = (Refl, Refl)
+appendOutputNil {xs=[]} {ys=y::ys} p = absurd p
+appendOutputNil {xs=(x::xs)} {ys}  p = absurd p
 
-||| Proof that `Null` can't match any string
 export
-nullMatchesAny_contra : {xs : List a} -> InRegExp Null xs -> Void
-nullMatchesAny_contra _ impossible
+Uninhabited (InRegExp Null xs) where
+  uninhabited _ impossible
+
+export
+Uninhabited (InRegExp Empty (x::xs)) where
+  uninhabited _ impossible
+
+export
+Uninhabited (InRegExp (Lit x) []) where
+  uninhabited _ impossible
 
 ||| Proof that if an `Empty` regular expression matches a string, then the string is empty.
 export
 emptyMatch_implies_emptyList : InRegExp Empty xs -> xs = []
 emptyMatch_implies_emptyList InEmpty = Refl
-
-||| Proof that `Empty` can't match a non-empty string
-export
-emptyMatchesNonEmpty_contra : {x : a} -> {xs : List a} -> InRegExp Empty (x::xs) -> Void
-emptyMatchesNonEmpty_contra _ impossible
 
 ||| Proof that for all `Lit x` matches, `x` is equal to the head of the string.
 export
@@ -149,11 +153,6 @@ litMatches_implies_headEqual : DecEq a =>
                                x = y
 litMatches_implies_headEqual {x} {y=x} {ys=[]} InLit = Refl
 
-||| Proof that `Lit` cannot match the empty string
-export
-litMatchesEmpty_contra : InRegExp (Lit x) [] -> Void
-litMatchesEmpty_contra _ impossible
-
 ||| Proof that if `Lit` matches `x::xs`, then `xs = []`
 export
 litMatchesCons_implies_restEmpty : InRegExp (Lit x) (x::xs) -> xs = []
@@ -161,37 +160,26 @@ litMatchesCons_implies_restEmpty InLit = Refl
 
 ||| Proof that if the `Cat r s` matches empty, then both `r` and `s` also match empty
 export
-lemma_catNotEmpty : {r : RegExp a} ->
-                    {s : RegExp a} ->
-                    InRegExp (Cat r s) [] ->
-                   (InRegExp r [], InRegExp s [])
-lemma_catNotEmpty (InCat p r s) with (lemma_appendOutputNil p)
-  lemma_catNotEmpty (InCat p r s) | (Refl, Refl) = (r, s)
+catNotEmpty : {r : RegExp a} ->
+              {s : RegExp a} ->
+              InRegExp (Cat r s) [] ->
+              (InRegExp r [], InRegExp s [])
+catNotEmpty (InCat p r s) with (appendOutputNil $ sym p)
+  catNotEmpty (InCat p r s) | (Refl, Refl) = (r, s)
 
 ||| Proof that if `Disj r s` matches empty, then at least one of `r` and `s` matches empty
 export
-lemma_disjNotEmpty : {r : RegExp a} ->
-                     {s : RegExp a} ->
-                     InRegExp (Disj r s) [] ->
-                     Either (InRegExp r []) (InRegExp s [])
-lemma_disjNotEmpty (InDisjL r) = Left r
-lemma_disjNotEmpty (InDisjR r) = Right r
+disjNotEmpty : {r : RegExp a} ->
+               {s : RegExp a} ->
+               InRegExp (Disj r s) [] ->
+               Either (InRegExp r []) (InRegExp s [])
+disjNotEmpty (InDisjL r) = Left r
+disjNotEmpty (InDisjR r) = Right r
 
 ||| Proof that if the `Conj r s` matches empty, then both `r` and `s` also match empty
 export
-lemma_conjNotEmpty : {r : RegExp a} ->
-                     {s : RegExp a} ->
-                     InRegExp (Conj r s) [] ->
-                     (InRegExp r [], InRegExp s [])
-lemma_conjNotEmpty (InConj r s) = (r, s)
-
-||| Proof that if both `Disj` inputs cannot match empty, then the `Disj` cannot match empty
-export
-disjWithNonEmptyInputsIsEmpty_contra : (r : RegExp a) ->
-                                       (s : RegExp a) ->
-                                       (contraR : InRegExp r [] -> Void) ->
-                                       (contraS : InRegExp s [] -> Void) ->
-                                       InRegExp (Disj r s) [] ->
-                                       Void
-disjWithNonEmptyInputsIsEmpty_contra r s contraR contraS (InDisjL p) = contraR p
-disjWithNonEmptyInputsIsEmpty_contra r s contraR contraS (InDisjR p) = contraS p
+conjNotEmpty : {r : RegExp a} ->
+               {s : RegExp a} ->
+               InRegExp (Conj r s) [] ->
+               (InRegExp r [], InRegExp s [])
+conjNotEmpty (InConj r s) = (r, s)
