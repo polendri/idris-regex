@@ -1,13 +1,11 @@
-module Regex.Types
+module RegExp.Types
 
 import Data.List
 import Decidable.Equality
 
-%default total
-
 ||| A regular expression specification.
 public export
-data RegExp : (a : Type) -> Type where
+data RegExp : (0 a : Type) -> Type where
   ||| Denotes the empty set
   Null : RegExp a
   ||| Denotes the empty string
@@ -23,7 +21,7 @@ data RegExp : (a : Type) -> Type where
   ||| Denotes the Kleene star
   Star : RegExp a -> RegExp a
 
-||| Defines the property of a regular expression matching an input string.
+||| The property of a regular expression matching an input string.
 public export
 data InRegExp: RegExp a -> List a -> Type where
   ||| Rule: `[]` is in `Empty`
@@ -74,6 +72,18 @@ data InRegExp: RegExp a -> List a -> Type where
             InRegExp (Star r) ys ->
             InRegExp (Star r) (xs ++ ys)
 
+export
+Uninhabited (InRegExp Null xs) where
+  uninhabited _ impossible
+
+export
+Uninhabited (InRegExp Empty (x::xs)) where
+  uninhabited _ impossible
+
+export
+Uninhabited (InRegExp (Lit x) []) where
+  uninhabited _ impossible
+
 ----------------------------------------------------------------------------------------------------
 -- Interface Implementations                                                                      --
 ----------------------------------------------------------------------------------------------------
@@ -115,9 +125,10 @@ DecEq a => DecEq (RegExp a) where
   decEq _ _ = No believe_me
 
 ----------------------------------------------------------------------------------------------------
--- Properties                                                                                     --
+-- Proofs                                                                                         --
 ----------------------------------------------------------------------------------------------------
 
+||| Proof that if the result of a concatenation is empty, then both inputs are empty
 appendOutputNil : {xs : List a} ->
                   {ys : List a} ->
                   xs ++ ys = [] ->
@@ -125,18 +136,6 @@ appendOutputNil : {xs : List a} ->
 appendOutputNil {xs=[]} {ys=[]}    p = (Refl, Refl)
 appendOutputNil {xs=[]} {ys=y::ys} p = absurd p
 appendOutputNil {xs=(x::xs)} {ys}  p = absurd p
-
-export
-Uninhabited (InRegExp Null xs) where
-  uninhabited _ impossible
-
-export
-Uninhabited (InRegExp Empty (x::xs)) where
-  uninhabited _ impossible
-
-export
-Uninhabited (InRegExp (Lit x) []) where
-  uninhabited _ impossible
 
 ||| Proof that if an `Empty` regular expression matches a string, then the string is empty.
 export

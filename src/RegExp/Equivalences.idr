@@ -1,12 +1,12 @@
 ||| Defines functions to use in place of `RegExp`'s data constructors, in order to create
 ||| regular expressions which are "normalized" to a canonical form as much as possible. This adds
 ||| some compile-time complexity but results in smaller DFAs for testing language membership.
-module Regex.Equivalences
+module RegExp.Equivalences
 
 import Data.List
 import Decidable.Equality
 
-import public Regex.Types
+import public RegExp.Types
 
 %default total
 

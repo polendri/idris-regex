@@ -1,0 +1,17 @@
+package RegExp
+
+modules = RegExp
+        , RegExp.Equivalences
+        , RegExp.String
+        , RegExp.Types
+sourcedir = "src"
+
+brief = "Verified regular expressions"
+version = "0.1.0"
+readme = "README.md"
+license = "MIT"
+authors = "Paul Hendry <paul@ijj.li>"
+maintainers = "Paul Hendry <paul@ijj.li>"
+homepage = "https://github.com/polendri/idris-regexp"
+sourceloc = "git@github.com:polendri/idris-regexp.git"
+bugtracker = "https://github.com/polendri/idris-regexp/issues"

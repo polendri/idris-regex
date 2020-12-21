@@ -1,3 +1,3 @@
-# idris-regex
+# idris-regexp
 
-Regular expressions in Idris 2. WIP
+Verified regular expressions in Idris 2.

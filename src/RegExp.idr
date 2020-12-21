@@ -1,15 +1,13 @@
-||| Defines verified regular expressions.
+||| Implements verified regular expressions.
 |||
-||| Based on https://www.ccs.neu.edu/home/turon/re-deriv.pdf
-module Regex
+||| Implementation is based on https://www.ccs.neu.edu/home/turon/re-deriv.pdf
+module RegExp
 
 import Data.List
 import Decidable.Equality
 
-import Regex.Equivalences
-import public Regex.Types
-
-%default total
+import RegExp.Equivalences
+import public RegExp.Types
 
 ||| Given a regular expression `r` and a string `xs`, determines whether `r` _matches_ `[]` (i.e.
 ||| whether empty is in the language of `r`).
@@ -121,9 +119,9 @@ mutual
 ||| Given a regular expression `r` and a string `xs`, determines whether `r` _matches_ `u` (i.e.
 ||| whether `xs` is in the language of `r`).
 export
-matches : DecEq a => (xs : List a) -> (r : RegExp a) -> Dec (InRegExp r xs)
-matches [] r = matchEmpty r
-matches (x::xs) r =
-  case matches xs (derive r x) of
+matches : DecEq a => (r : RegExp a) -> (xs : List a) -> Dec (InRegExp r xs)
+matches r [] = matchEmpty r
+matches r (x::xs) =
+  case matches (derive r x) xs of
     Yes prf => Yes $ derive_isSound prf
     No contra => No $ contra . derive_isComplete
