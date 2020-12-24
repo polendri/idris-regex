@@ -3,7 +3,7 @@ module RegExp.String
 
 import Decidable.Equality
 import RegExp as RE
-import RegExp.Types as RET
+import public RegExp.Types as RET
 
 infixr 2 .|.
 infixr 3 .&.
@@ -21,17 +21,12 @@ RegExp = RET.RegExp Char
 
 ||| The property of a regular expression matching an input string.
 public export
-InRegExp : RegExp -> String -> Type
-InRegExp r s = RET.InRegExp r (unpack s)
+Matches : RegExp -> String -> Type
+Matches r s = RET.Matches r (unpack s)
 
 ---------------
 -- OPERATORS --
 ---------------
-
-||| Decides whether the provided string matches a regular expression.
-export
-matches : (r : RegExp) -> (s : String) -> Dec (InRegExp r s)
-matches r s = RE.matches r (unpack s)
 
 ||| Builds a `RegExp` matching a single character.
 export
@@ -52,6 +47,11 @@ export
 export
 (.&.) : RegExp -> RegExp -> RegExp
 (.&.) = Conj
+
+||| Builds a `RegExp` which optionally matches another `RegExp`.
+export
+one : RegExp -> RegExp
+one r = Star r .|. Empty
 
 ||| Builds a `RegExp` which matches zero or more of another `RegExp`.
 export
@@ -74,29 +74,58 @@ export
                then r
                else to min (n - 1) (Disj (Lit (chr n)) r)
 
+||| Builds a `RegExp` which matches any one of the provided characters.
+export
+any : (Foldable a, Functor a) => (xs : a Char) -> RegExp
+any = foldr (.|.) Null . map Lit
+
 ----------------
 -- SHORTHANDS --
 ----------------
 
+||| Matches a lowercase ASCII character.
 export
 lowercase : RegExp
 lowercase = 'a'...'z'
 
+||| Matches an uppercase ASCII character.
 export
 uppercase : RegExp
 uppercase = 'A'...'Z'
 
+||| Matches an alphabetical ASCII character.
 export
 alpha : RegExp
 alpha = lowercase .|. uppercase
 
+||| Matches a numeric digit ASCII character.
 export
-number : RegExp
-number = '0'...'9'
+digit : RegExp
+digit = '0'...'9'
 
+||| Matches an alphanumeric ASCII character.
 export
 alphaNumeric : RegExp
-alphaNumeric = alpha .|. number
+alphaNumeric = alpha .|. digit
+
+||| Matches an alphanumeric or underscore ASCII character.
+export
+word : RegExp
+word = alphaNumeric .|. lit '_'
+
+||| Matches a whitespace ASCII character.
+export
+whitespace : RegExp
+whitespace = any [' ', '\t', '\r', '\n', '\v', '\f']
+
+--------------
+-- MATCHING --
+--------------
+
+||| Decides whether the provided string matches a regular expression.
+export
+matches : (r : RegExp) -> (s : String) -> Dec (Matches r s)
+matches r s = RE.matches r (unpack s)
 
 -----------
 -- TESTS --

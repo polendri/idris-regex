@@ -23,11 +23,11 @@ data RegExp : (0 a : Type) -> Type where
 
 ||| The property of a regular expression matching an input string.
 public export
-data InRegExp: RegExp a -> List a -> Type where
+data Matches: RegExp a -> List a -> Type where
   ||| Rule: `[]` is in `Empty`
-  InEmpty : InRegExp Empty []
+  InEmpty : Matches Empty []
   ||| Rule: `[x]` is in `Lit x`
-  InLit : {x : a} -> InRegExp (Lit x) [x]
+  InLit : {x : a} -> Matches (Lit x) [x]
   ||| Rule: If `xs` is in regular expressions `r` and `ys` is in regular expression `s`, then
   ||| `xs ++ ys` is in `Cat r s`
   InCat : {xs : List a} ->
@@ -36,31 +36,31 @@ data InRegExp: RegExp a -> List a -> Type where
           {r : RegExp a} ->
           {s : RegExp a} ->
           (p : zs = xs ++ ys) ->
-          InRegExp r xs ->
-          InRegExp s ys ->
-          InRegExp (Cat r s) zs
+          Matches r xs ->
+          Matches s ys ->
+          Matches (Cat r s) zs
   ||| Rule: If `xs` is in regular expression `r`, then `xs` is in `Disj r _` (i.e. left side)
   InDisjL : {xs : List a} ->
             {r : RegExp a} ->
             {s : RegExp a} ->
-            InRegExp r xs ->
-            InRegExp (Disj r s) xs
+            Matches r xs ->
+            Matches (Disj r s) xs
   ||| Rule: If `xs` is in regular expression `s`, then `xs` is in `Disj _ s` (i.e. right side)
   InDisjR : {xs : List a} ->
             {r : RegExp a} ->
             {s: RegExp a} ->
-            InRegExp s xs ->
-            InRegExp (Disj r s) xs
+            Matches s xs ->
+            Matches (Disj r s) xs
   ||| Rule: If `xs` is in regular expressions `r` and `s`, then `xs` is in `Conj r s`
   InConj : {xs : List a} ->
            {r : RegExp a} ->
            {s : RegExp a} ->
-           InRegExp r xs ->
-           InRegExp s xs ->
-           InRegExp (Conj r s) xs
+           Matches r xs ->
+           Matches s xs ->
+           Matches (Conj r s) xs
   ||| Rule: For all regular expression `r`, the empty string is in `Star r`.
   InStarZ : {r: RegExp a} ->
-            InRegExp (Star r) []
+            Matches (Star r) []
   ||| Rule: If `xs` is in regular expression `r` and `ys` is in `Star r`, then `xs ++ ys` is also
   ||| in `Star r`.
   InStarS : {xs : List a} ->
@@ -68,20 +68,20 @@ data InRegExp: RegExp a -> List a -> Type where
             {zs : List a} ->
             {r : RegExp a} ->
             (p : zs = xs ++ ys) ->
-            InRegExp r xs ->
-            InRegExp (Star r) ys ->
-            InRegExp (Star r) (xs ++ ys)
+            Matches r xs ->
+            Matches (Star r) ys ->
+            Matches (Star r) (xs ++ ys)
 
 export
-Uninhabited (InRegExp Null xs) where
+Uninhabited (Matches Null xs) where
   uninhabited _ impossible
 
 export
-Uninhabited (InRegExp Empty (x::xs)) where
+Uninhabited (Matches Empty (x::xs)) where
   uninhabited _ impossible
 
 export
-Uninhabited (InRegExp (Lit x) []) where
+Uninhabited (Matches (Lit x) []) where
   uninhabited _ impossible
 
 ----------------------------------------------------------------------------------------------------
@@ -139,7 +139,7 @@ appendOutputNil {xs=(x::xs)} {ys}  p = absurd p
 
 ||| Proof that if an `Empty` regular expression matches a string, then the string is empty.
 export
-emptyMatch_implies_emptyList : InRegExp Empty xs -> xs = []
+emptyMatch_implies_emptyList : Matches Empty xs -> xs = []
 emptyMatch_implies_emptyList InEmpty = Refl
 
 ||| Proof that for all `Lit x` matches, `x` is equal to the head of the string.
@@ -148,21 +148,21 @@ litMatches_implies_headEqual : DecEq a =>
                                {x : a} ->
                                {y : a} ->
                                {ys : List a} ->
-                               InRegExp (Lit x) (y::ys) ->
+                               Matches (Lit x) (y::ys) ->
                                x = y
 litMatches_implies_headEqual {x} {y=x} {ys=[]} InLit = Refl
 
 ||| Proof that if `Lit` matches `x::xs`, then `xs = []`
 export
-litMatchesCons_implies_restEmpty : InRegExp (Lit x) (x::xs) -> xs = []
+litMatchesCons_implies_restEmpty : Matches (Lit x) (x::xs) -> xs = []
 litMatchesCons_implies_restEmpty InLit = Refl
 
 ||| Proof that if the `Cat r s` matches empty, then both `r` and `s` also match empty
 export
 catNotEmpty : {r : RegExp a} ->
               {s : RegExp a} ->
-              InRegExp (Cat r s) [] ->
-              (InRegExp r [], InRegExp s [])
+              Matches (Cat r s) [] ->
+              (Matches r [], Matches s [])
 catNotEmpty (InCat p r s) with (appendOutputNil $ sym p)
   catNotEmpty (InCat p r s) | (Refl, Refl) = (r, s)
 
@@ -170,8 +170,8 @@ catNotEmpty (InCat p r s) with (appendOutputNil $ sym p)
 export
 disjNotEmpty : {r : RegExp a} ->
                {s : RegExp a} ->
-               InRegExp (Disj r s) [] ->
-               Either (InRegExp r []) (InRegExp s [])
+               Matches (Disj r s) [] ->
+               Either (Matches r []) (Matches s [])
 disjNotEmpty (InDisjL r) = Left r
 disjNotEmpty (InDisjR r) = Right r
 
@@ -179,6 +179,6 @@ disjNotEmpty (InDisjR r) = Right r
 export
 conjNotEmpty : {r : RegExp a} ->
                {s : RegExp a} ->
-               InRegExp (Conj r s) [] ->
-               (InRegExp r [], InRegExp s [])
+               Matches (Conj r s) [] ->
+               (Matches r [], Matches s [])
 conjNotEmpty (InConj r s) = (r, s)

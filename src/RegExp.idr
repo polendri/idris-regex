@@ -11,7 +11,7 @@ import public RegExp.Types
 
 ||| Given a regular expression `r` and a string `xs`, determines whether `r` _matches_ `[]` (i.e.
 ||| whether empty is in the language of `r`).
-matchEmpty : (r : RegExp a) -> Dec (InRegExp r [])
+matchEmpty : (r : RegExp a) -> Dec (Matches r [])
 matchEmpty Null = No absurd
 matchEmpty Empty = Yes InEmpty
 matchEmpty (Lit x) = No absurd
@@ -48,8 +48,8 @@ derive_isSound : DecEq a =>
                  {r : RegExp a} ->
                  {x : a} ->
                  {xs : List a} ->
-                 InRegExp (derive r x) xs ->
-                 InRegExp r (x::xs)
+                 Matches (derive r x) xs ->
+                 Matches r (x::xs)
 derive_isSound {r=Null}  _ impossible
 derive_isSound {r=Empty} _ impossible
 derive_isSound {r=(Lit y)} {x} p with (decEq y x)
@@ -78,8 +78,8 @@ mutual
                           (x : a) ->
                           (xs : List a) ->
                           xs = x :: xs' ->
-                          InRegExp (Star r) xs ->
-                          InRegExp (normCat (derive r x) (Star r)) xs'
+                          Matches (Star r) xs ->
+                          Matches (normCat (derive r x) (Star r)) xs'
   deriveStar_isComplete _ [] p _ = absurd p
   deriveStar_isComplete {xs'} x _ p (InStarS {xs=[]} {ys} Refl pr ps) =
     deriveStar_isComplete x ys p ps
@@ -92,8 +92,8 @@ mutual
                       {r : RegExp a} ->
                       {x : a} ->
                       {xs : List a} ->
-                      InRegExp r (x::xs) ->
-                      InRegExp (derive r x) xs
+                      Matches r (x::xs) ->
+                      Matches (derive r x) xs
   derive_isComplete {r=Null}       p               = absurd p
   derive_isComplete {r=Empty}      p               = absurd p
   derive_isComplete {r=(Lit y)}    p with (decEq y x)
@@ -119,7 +119,7 @@ mutual
 ||| Given a regular expression `r` and a string `xs`, determines whether `r` _matches_ `u` (i.e.
 ||| whether `xs` is in the language of `r`).
 export
-matches : DecEq a => (r : RegExp a) -> (xs : List a) -> Dec (InRegExp r xs)
+matches : DecEq a => (r : RegExp a) -> (xs : List a) -> Dec (Matches r xs)
 matches r [] = matchEmpty r
 matches r (x::xs) =
   case matches (derive r x) xs of

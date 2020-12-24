@@ -66,8 +66,8 @@ normCat_isSound : DecEq a =>
                   {xs : List a} ->
                   {r : RegExp a} ->
                   {s : RegExp a} ->
-                  InRegExp (normCat r s) xs ->
-                  InRegExp (Cat r s) xs
+                  Matches (normCat r s) xs ->
+                  Matches (Cat r s) xs
 normCat_isSound      {r=Null}       {s}            p = absurd p
 normCat_isSound      {r=Empty}      {s=Null}       p = absurd p
 normCat_isSound      {r=Empty}      {s=Empty}      p = InCat Refl InEmpty p
@@ -123,8 +123,8 @@ normCat_isComplete : DecEq a =>
                      {xs : List a} ->
                      {r : RegExp a} ->
                      {s : RegExp a} ->
-                     InRegExp (Cat r s) xs ->
-                     InRegExp (normCat r s) xs
+                     Matches (Cat r s) xs ->
+                     Matches (normCat r s) xs
 normCat_isComplete {r=Null}                      (InCat _ pr _) = absurd pr
 normCat_isComplete                {s=Null}       (InCat _ _ ps) = absurd ps
 normCat_isComplete {r=Empty}      {s=Empty}      (InCat pCat InEmpty ps) = rewrite pCat in ps
@@ -175,8 +175,8 @@ normDisj_isSound : DecEq a =>
                    {xs : List a} ->
                    {r : RegExp a} ->
                    {s : RegExp a} ->
-                   InRegExp (normDisj r s) xs ->
-                   InRegExp (Disj r s) xs
+                   Matches (normDisj r s) xs ->
+                   Matches (Disj r s) xs
 normDisj_isSound {r=Null}                      p                     = InDisjR p
 normDisj_isSound {r=Empty}      {s=Null}       p                     = InDisjL p
 normDisj_isSound {r=Empty}      {s=Empty}      p                     = p
@@ -257,8 +257,8 @@ normDisj_isComplete : DecEq a =>
                       {xs : List a} ->
                       {r : RegExp a} ->
                       {s : RegExp a} ->
-                      InRegExp (Disj r s) xs ->
-                      InRegExp (normDisj r s) xs
+                      Matches (Disj r s) xs ->
+                      Matches (normDisj r s) xs
 normDisj_isComplete {r=Null}                      (InDisjL p)           = absurd p
 normDisj_isComplete {r=Null}                      (InDisjR p)           = p
 normDisj_isComplete {r=Empty}      {s=Null}       (InDisjL p)           = p
@@ -352,8 +352,8 @@ normConj_isSound : DecEq a =>
                    {xs : List a} ->
                    {r : RegExp a} ->
                    {s : RegExp a} ->
-                   InRegExp (normConj r s) xs ->
-                   InRegExp (Conj r s) xs
+                   Matches (normConj r s) xs ->
+                   Matches (Conj r s) xs
 normConj_isSound {r=Null}       {s}       p = absurd p
 normConj_isSound {r=Empty}      {s=Null}       p = absurd p
 normConj_isSound {r=Empty}      {s=Empty}      p = p
@@ -422,8 +422,8 @@ normConj_isComplete : DecEq a =>
                       {xs : List a} ->
                       {r : RegExp a} ->
                       {s : RegExp a} ->
-                      InRegExp (Conj r s) xs ->
-                      InRegExp (normConj r s) xs
+                      Matches (Conj r s) xs ->
+                      Matches (normConj r s) xs
 normConj_isComplete {r=Null}                      (InConj p _) = absurd p
 normConj_isComplete                {s=Null}       (InConj _ p) = absurd p
 normConj_isComplete {r=Empty}      {s=Empty}      p = p
